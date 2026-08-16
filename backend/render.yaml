@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: constituency-manager-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    envVars:
+      - key: DATA_DIR
+        value: /app/data
+      - key: TESSERACT_LANG
+        value: hin+eng
