@@ -1,0 +1,113 @@
+name: Build Client Ready APK
+
+on:
+  push:
+    branches:
+      - client-ready-apk-3-6-1-final
+  workflow_dispatch:
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Patch app for managed backend
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import json
+
+          p = Path('App.tsx')
+          s = p.read_text()
+
+          s = s.replace(
+              "function defaultApiUrl() { return isWeb() ? 'http://127.0.0.1:8000' : ''; }",
+              "function defaultApiUrl() { return 'https://elecdemo01.onrender.com'; }"
+          )
+
+          s = s.replace(
+              "if(raw){ try{ const s=JSON.parse(raw); if(s.apiUrl!==undefined)setApiUrl(s.apiUrl); if(s.apiKey)setApiKey(s.apiKey); if(s.org)setOrg(s.org); }catch{} }",
+              "if(raw){ try{ const s=JSON.parse(raw); setApiUrl(defaultApiUrl()); if(s.apiKey)setApiKey(s.apiKey); if(s.org)setOrg(s.org); }catch{} } else { setApiUrl(defaultApiUrl()); }"
+          )
+
+          s = s.replace("const timeout=setTimeout(()=>controller.abort(), options.timeoutMs||15000);", "const timeout=setTimeout(()=>controller.abort(), options.timeoutMs||65000);")
+          s = s.replace("await request('/health',{timeoutMs:5000});", "await request('/health',{timeoutMs:65000});")
+          s = s.replace("await request('/health',{timeoutMs:2500});", "await request('/health',{timeoutMs:65000});")
+          s = s.replace("for(let i=0;i<12;i++){", "for(let i=0;i<2;i++){")
+          s = s.replace("await new Promise(r=>setTimeout(r,750));", "await new Promise(r=>setTimeout(r,1500));")
+          s = s.replace("if(e?.name==='AbortError') throw new Error('Backend timed out. Make sure the API server is running on port 8000.');", "if(e?.name==='AbortError') throw new Error('Server is taking longer than expected. Please check your internet connection and retry.');")
+          s = s.replace("if(String(e?.message||e).includes('Failed to fetch')) throw new Error(`Backend is not reachable at ${apiUrl}. Start the backend, then retry.`);", "if(String(e?.message||e).includes('Failed to fetch')) throw new Error('Server is temporarily unreachable. Please check your internet connection and retry.');")
+          s = s.replace('<Field label="Backend URL" value={apiUrl} onChangeText={setApiUrl} placeholder="http://127.0.0.1:8000"/>', '<Text style={styles.helpText}>Cloud server is configured automatically.</Text>')
+          s = s.replace('<Field label="API key (optional)" value={apiKey} onChangeText={setApiKey} placeholder="Only if APP_API_KEY is enabled"/>', '')
+          s = s.replace('<Text style={styles.helpText}>Mac/Windows browser: http://127.0.0.1:8000. Physical phone: use your computer\'s LAN IP, e.g. http://192.168.1.5:8000.</Text>', '<Text style={styles.helpText}>No backend setup is required on this device.</Text>')
+          s = s.replace('label="Save settings"', 'label="Save name"')
+
+          required = [
+              "https://elecdemo01.onrender.com",
+              "Cloud server is configured automatically.",
+              "No backend setup is required on this device."
+          ]
+          for item in required:
+              if item not in s:
+                  raise SystemExit(f'Missing expected patch: {item}')
+
+          p.write_text(s)
+
+          ap = Path('app.json')
+          d = json.loads(ap.read_text())
+          d['expo']['version'] = '3.6.1'
+          d['expo'].setdefault('android', {})['package'] = 'com.constituencymanager.app'
+          d['expo']['android']['versionCode'] = 361
+          ap.write_text(json.dumps(d, indent=2) + '\n')
+          PY
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Type check
+        run: npx tsc --noEmit
+
+      - name: Generate Android project
+        run: npx expo prebuild --platform android --clean
+
+      - name: Build release APK
+        working-directory: android
+        shell: bash
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleRelease --no-daemon --stacktrace
+
+      - name: Collect APK
+        shell: bash
+        run: |
+          APK=$(find android/app/build/outputs/apk -type f -name '*.apk' | head -n 1)
+          test -n "$APK"
+          cp "$APK" Constituency-Manager-3.6.1-Client.apk
+          ls -lh Constituency-Manager-3.6.1-Client.apk
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Constituency-Manager-3.6.1-Client-APK
+          path: Constituency-Manager-3.6.1-Client.apk
+          if-no-files-found: error
+          retention-days: 30
