@@ -15,7 +15,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Patch app for managed backend and reliable Android uploads
+      - name: Patch app for managed backend
         shell: bash
         run: |
           python - <<'PY'
@@ -42,64 +42,19 @@ jobs:
           s = s.replace("await new Promise(r=>setTimeout(r,750));", "await new Promise(r=>setTimeout(r,1500));")
           s = s.replace("if(e?.name==='AbortError') throw new Error('Backend timed out. Make sure the API server is running on port 8000.');", "if(e?.name==='AbortError') throw new Error('Server is taking longer than expected. Please check your internet connection and retry.');")
           s = s.replace("if(String(e?.message||e).includes('Failed to fetch')) throw new Error(`Backend is not reachable at ${apiUrl}. Start the backend, then retry.`);", "if(String(e?.message||e).includes('Failed to fetch')) throw new Error('Server is temporarily unreachable. Please check your internet connection and retry.');")
-
-          old_upload = '''  async function uploadFile(path:string,accept:string,mime:string){
-    const form=new FormData();
-    if(isWeb()){
-      const file=await pickWebFile(accept); if(!file)return null; form.append('file',file,file.name);
-    }else{
-      const r=await DocumentPicker.getDocumentAsync({type:mime,copyToCacheDirectory:true}); if(r.canceled)return null; const a=r.assets[0]; form.append('file',{uri:a.uri,name:a.name,mimeType:a.mimeType||mime} as any);
-    }
-    const res=await fetch(`${apiUrl.replace(/\\/$/,'')}${path}`,{method:'POST',headers:{...(apiKey?{'X-App-Key':apiKey}:{})},body:form});
-    const j=await res.json(); if(!res.ok)throw new Error(j.detail||`HTTP ${res.status}`); return j;
-  }'''
-
-          new_upload = '''  async function uploadFile(path:string,accept:string,mime:string){
-    if(!apiUrl) throw new Error('Backend URL is not configured');
-    const endpoint=`${apiUrl.replace(/\\/$/,'')}${path}`;
-    if(isWeb()){
-      const file=await pickWebFile(accept); if(!file)return null;
-      const form=new FormData(); form.append('file',file,file.name);
-      const res=await fetch(endpoint,{method:'POST',headers:{...(apiKey?{'X-App-Key':apiKey}:{})},body:form});
-      const j=await res.json(); if(!res.ok)throw new Error(j.detail||`HTTP ${res.status}`); return j;
-    }
-    const r=await DocumentPicker.getDocumentAsync({type:mime,copyToCacheDirectory:true});
-    if(r.canceled)return null;
-    const a=r.assets[0];
-    try{
-      const result=await FileSystem.uploadAsync(endpoint,a.uri,{
-        httpMethod:'POST',
-        uploadType:FileSystem.FileSystemUploadType.MULTIPART,
-        fieldName:'file',
-        mimeType:a.mimeType||mime,
-        headers:{...(apiKey?{'X-App-Key':apiKey}:{})},
-      });
-      let j:any={};
-      try{j=JSON.parse(result.body||'{}')}catch{throw new Error(`Server returned an invalid response (HTTP ${result.status})`)}
-      if(result.status<200||result.status>=300)throw new Error(j.detail||`HTTP ${result.status}`);
-      return j;
-    }catch(e:any){
-      const msg=String(e?.message||e);
-      if(/network request failed|network error|failed to fetch/i.test(msg)) throw new Error('PDF upload could not reach the server. Check internet and retry.');
-      throw e;
-    }
-  }'''
-
-          if old_upload not in s:
-              raise SystemExit('Could not find original uploadFile function')
-          s = s.replace(old_upload, new_upload)
-
+          s = s.replace("form.append('file',{uri:a.uri,name:a.name,mimeType:a.mimeType||mime} as any);", "form.append('file',{uri:a.uri,name:a.name,type:a.mimeType||mime} as any);")
           s = s.replace('<Field label="Backend URL" value={apiUrl} onChangeText={setApiUrl} placeholder="http://127.0.0.1:8000"/>', '<Text style={styles.helpText}>Cloud server is configured automatically.</Text>')
           s = s.replace('<Field label="API key (optional)" value={apiKey} onChangeText={setApiKey} placeholder="Only if APP_API_KEY is enabled"/>', '')
           s = s.replace('<Text style={styles.helpText}>Mac/Windows browser: http://127.0.0.1:8000. Physical phone: use your computer\'s LAN IP, e.g. http://192.168.1.5:8000.</Text>', '<Text style={styles.helpText}>No backend setup is required on this device.</Text>')
           s = s.replace('label="Save settings"', 'label="Save name"')
 
-          for item in [
+          required = [
               "https://elecdemo01.onrender.com",
-              "FileSystem.uploadAsync(endpoint",
+              "type:a.mimeType||mime",
               "Cloud server is configured automatically.",
               "No backend setup is required on this device."
-          ]:
+          ]
+          for item in required:
               if item not in s:
                   raise SystemExit(f'Missing expected patch: {item}')
 
