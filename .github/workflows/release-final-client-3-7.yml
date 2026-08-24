@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - final-client-3-7-0
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
 
 permissions:
@@ -63,6 +66,7 @@ jobs:
           retention-days: 30
 
       - name: Publish GitHub release
+        if: github.event_name == 'push'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: client-3.7.0-final
