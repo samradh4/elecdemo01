@@ -1,0 +1,79 @@
+name: Release Final Client APK 3.7.0
+
+on:
+  push:
+    branches:
+      - final-client-3-7-0
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release-apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Apply production fixes
+        run: python scripts/patch_final_client.py
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Type check
+        run: npx tsc --noEmit
+
+      - name: Prebuild Android
+        run: npx expo prebuild --platform android --clean
+
+      - name: Build release APK
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleRelease --no-daemon --stacktrace
+
+      - name: Verify and collect APK
+        run: |
+          APK=$(find android/app/build/outputs/apk -type f -name '*.apk' | head -n 1)
+          test -n "$APK"
+          cp "$APK" Constituency-Manager-3.7.0-Final.apk
+          unzip -t Constituency-Manager-3.7.0-Final.apk >/dev/null
+          sha256sum Constituency-Manager-3.7.0-Final.apk > Constituency-Manager-3.7.0-Final.sha256
+          ls -lh Constituency-Manager-3.7.0-Final.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Constituency-Manager-3.7.0-Final-APK
+          path: |
+            Constituency-Manager-3.7.0-Final.apk
+            Constituency-Manager-3.7.0-Final.sha256
+          retention-days: 30
+
+      - name: Publish GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: client-3.7.0-final
+          name: Constituency Manager 3.7.0 Final Client APK
+          body: |
+            Client-ready Android APK.
+            - Cloud backend preconfigured
+            - Android CSV picker fixed
+            - Native multipart uploads for CSV/PDF
+            - Render cold-start health wake-up
+            - Longer network timeouts and clearer errors
+          files: |
+            Constituency-Manager-3.7.0-Final.apk
+            Constituency-Manager-3.7.0-Final.sha256
