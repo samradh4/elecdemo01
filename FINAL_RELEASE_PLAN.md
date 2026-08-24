@@ -1,1 +1,0 @@
-Final client release 3.7.0 preparation branch marker.
