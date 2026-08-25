@@ -3,6 +3,8 @@ from v4 import router as v4_router
 from v421_demo_fix import router as v421_demo_fix_router
 from v41 import router as v41_router
 from pdf_bulk_v42 import router as pdf_v42_router
+# Patch the legacy roll page parser after pdf_bulk_v42 initializes it, before any jobs run.
+import fast_ocr_v422  # noqa: F401
 from pdf_import_v42 import router as pdf_import_v42_router
 
 app.include_router(v4_router)

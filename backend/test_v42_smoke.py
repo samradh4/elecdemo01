@@ -8,14 +8,16 @@ os.environ["DATA_DIR"] = str(root / "data")
 os.environ["PDF_STORAGE_DIR"] = str(root / "pdf")
 os.environ["PDF_WORKERS"] = "2"
 os.environ["ROLL_OCR_SCALE"] = "2.0"
+os.environ["ROLL_OCR_FAST_SCALE"] = "1.8"
 os.environ["V4_AUTH_SECRET"] = "cm42-test-secret"
 
 from fastapi.testclient import TestClient
 from main_v4_entry import app
+import main
 import pdf_bulk_v42
 
-# Queue intake is tested without running Tesseract. OCR itself is already covered
-# by the existing converter implementation and Docker build includes its native deps.
+# Queue intake is tested without running Tesseract. OCR itself is exercised in
+# production; this smoke test verifies the bounded queue and fast-parser wiring.
 pdf_bulk_v42._submit = lambda job_id, source_path: None
 
 c = TestClient(app)
@@ -31,7 +33,8 @@ cfg = c.get("/v4/admin/pdf/config", headers=h)
 assert cfg.status_code == 200, cfg.text
 cfgj = cfg.json()
 assert cfgj["workers"] == 2
-assert cfgj["ocrScale"] == 2.0
+assert cfgj["ocrScale"] == 1.8
+assert getattr(main, "FAST_OCR_ENABLED", False) is True
 
 files = [
     ("files", ("booth-101.pdf", b"%PDF-1.4\n% demo\n", "application/pdf")),
