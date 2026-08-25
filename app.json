@@ -2,16 +2,37 @@
   "expo": {
     "name": "Constituency Manager",
     "slug": "constituency-manager",
-    "version": "4.0.0",
+    "version": "4.1.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "platforms": ["android", "ios", "web"],
+    "plugins": [
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Allow Constituency Manager to use location while you are doing field work.",
+          "locationAlwaysAndWhenInUsePermission": "Allow Constituency Manager to record your work route while Work Tracking is switched on.",
+          "isAndroidBackgroundLocationEnabled": true,
+          "isIosBackgroundLocationEnabled": true
+        }
+      ]
+    ],
     "android": {
       "package": "com.constituencymanager.app",
-      "versionCode": 400
+      "versionCode": 410,
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION",
+        "FOREGROUND_SERVICE",
+        "FOREGROUND_SERVICE_LOCATION"
+      ]
     },
     "ios": {
-      "bundleIdentifier": "com.constituencymanager.app"
+      "bundleIdentifier": "com.constituencymanager.app",
+      "infoPlist": {
+        "UIBackgroundModes": ["location"]
+      }
     },
     "web": {
       "bundler": "metro"
