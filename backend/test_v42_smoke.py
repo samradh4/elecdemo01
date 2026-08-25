@@ -56,5 +56,9 @@ html = portal.text
 assert "function doLogin()" in html
 assert "login.style.display" not in html
 assert "multiple" in html and "/admin/pdf/bulk" in html
+assert "Constituency Manager 4.2.3" in html
+assert "Rejected row details" in html
+assert "extracted rows" in html
+assert "0 verified rows" in html
 
-print("v4.2 bulk queue/admin portal smoke test passed")
+print("v4.2.3 bulk queue/admin portal diagnostics smoke test passed")
