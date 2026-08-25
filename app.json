@@ -2,16 +2,13 @@
   "expo": {
     "name": "Constituency Manager",
     "slug": "constituency-manager",
-    "version": "3.5.0",
+    "version": "4.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
-    "platforms": [
-      "android",
-      "ios",
-      "web"
-    ],
+    "platforms": ["android", "ios", "web"],
     "android": {
-      "package": "com.constituencymanager.app"
+      "package": "com.constituencymanager.app",
+      "versionCode": 400
     },
     "ios": {
       "bundleIdentifier": "com.constituencymanager.app"
