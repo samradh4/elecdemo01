@@ -1,0 +1,77 @@
+name: Build V4.1 Field Operations APK
+
+on:
+  push:
+    branches:
+      - v4-1-field-operations
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  test-backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install backend dependencies
+        working-directory: backend
+        run: |
+          pip install --no-cache-dir -r requirements.txt
+          pip install --no-cache-dir httpx
+      - name: Compile backend
+        working-directory: backend
+        run: python -m py_compile main.py v4.py v41.py main_v4_entry.py
+      - name: V4.1 field operations smoke test
+        working-directory: backend
+        run: python test_v41_smoke.py
+      - name: Verify Docker image
+        run: docker build -t constituency-manager-v41 ./backend
+
+  build-apk:
+    needs: test-backend
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Use V4.1 mobile app
+        run: cp AppV41.tsx App.tsx
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Install Expo native modules
+        run: npx expo install expo-sqlite expo-secure-store @react-native-community/netinfo expo-location expo-task-manager
+      - name: Type check
+        run: npx tsc --noEmit
+      - name: Prebuild Android
+        run: npx expo prebuild --platform android --clean
+      - name: Build release APK
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleRelease --no-daemon --stacktrace
+      - name: Verify and collect APK
+        run: |
+          APK=$(find android/app/build/outputs/apk -type f -name '*.apk' | head -n 1)
+          test -n "$APK"
+          cp "$APK" Constituency-Manager-4.1.0-Field-Ops.apk
+          unzip -t Constituency-Manager-4.1.0-Field-Ops.apk >/dev/null
+          sha256sum Constituency-Manager-4.1.0-Field-Ops.apk > Constituency-Manager-4.1.0-Field-Ops.sha256
+          ls -lh Constituency-Manager-4.1.0-Field-Ops.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Constituency-Manager-4.1.0-Field-Ops-APK
+          path: |
+            Constituency-Manager-4.1.0-Field-Ops.apk
+            Constituency-Manager-4.1.0-Field-Ops.sha256
+          retention-days: 30
