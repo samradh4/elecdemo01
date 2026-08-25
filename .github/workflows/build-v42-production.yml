@@ -25,7 +25,7 @@ jobs:
           pip install --no-cache-dir httpx
       - name: Compile backend
         working-directory: backend
-        run: python -m py_compile main.py v4.py v41.py pdf_bulk_v42.py main_v4_entry.py
+        run: python -m py_compile main.py v4.py v41.py pdf_bulk_v42.py pdf_import_v42.py main_v4_entry.py
       - name: V4.1 field operations smoke test
         working-directory: backend
         run: python test_v41_smoke.py
