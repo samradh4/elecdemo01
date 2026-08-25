@@ -1,0 +1,4 @@
+constituencyCode,constituencyName,boothNo,boothName,boothAddress,serialNo,epicId,name,localName,relationType,relativeName,houseNo,age,gender,section
+AC-1,Demo Assembly,101,Demo Booth 101,Demo School,1,ABC0000001,Demo Voter 1,डेमो मतदाता 1,Father,Demo Relative 1,101,30,Male,Demo Section
+AC-1,Demo Assembly,101,Demo Booth 101,Demo School,2,ABC0000002,Demo Voter 2,डेमो मतदाता 2,Husband,Demo Relative 2,102,28,Female,Demo Section
+AC-1,Demo Assembly,102,Demo Booth 102,Community Hall,1,ABC0000003,Demo Voter 3,डेमो मतदाता 3,Father,Demo Relative 3,201,42,Male,Demo Section 2
