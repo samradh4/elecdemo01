@@ -37,18 +37,10 @@ jobs:
     timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
-      - name: Use V4 mobile app and apply startup safety fix
+      - name: Use V4 mobile app and apply sync safety fixes
         run: |
           cp AppV4.tsx App.tsx
-          python - <<'PY'
-          from pathlib import Path
-          p=Path('App.tsx'); s=p.read_text()
-          s=s.replace("      if(!asg.active){if(cached?.assignment){await clearLocalBooth()}const s={user:session!.user,assignment:null,offlineLeaseUntil:null};setSession(s);await metaSet('session',s);await loadLocal();if(!silent)msg('Access updated',asg.pending?'Your booth request is waiting for admin approval.':'No active booth is assigned.');return}","      const activeUser=session?.user||cached?.user;\n      if(!activeUser)throw new Error('Please login again.');\n      if(!asg.active){if(cached?.assignment){await clearLocalBooth()}const s={user:activeUser,assignment:null,offlineLeaseUntil:null};setSession(s);await metaSet('session',s);await loadLocal();if(!silent)msg('Access updated',asg.pending?'Your booth request is waiting for admin approval.':'No active booth is assigned.');return}")
-          s=s.replace("      const s:Session={user:session!.user,assignment:asg.active,offlineLeaseUntil:lease};","      const s:Session={user:activeUser,assignment:asg.active,offlineLeaseUntil:lease};")
-          if 'const activeUser=session?.user||cached?.user;' not in s:
-              raise SystemExit('startup sync safety patch failed')
-          p.write_text(s)
-          PY
+          python scripts/patch_v4_mobile.py
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
