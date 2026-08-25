@@ -2,7 +2,7 @@
   "expo": {
     "name": "Constituency Manager",
     "slug": "constituency-manager",
-    "version": "4.1.1",
+    "version": "4.2.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "platforms": ["android", "ios", "web"],
@@ -19,7 +19,7 @@
     ],
     "android": {
       "package": "com.constituencymanager.app",
-      "versionCode": 411,
+      "versionCode": 420,
       "permissions": [
         "ACCESS_COARSE_LOCATION",
         "ACCESS_FINE_LOCATION",
