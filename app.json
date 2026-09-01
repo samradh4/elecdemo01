@@ -6,6 +6,12 @@
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "platforms": ["android", "ios", "web"],
+    "icon": "./assets/icon.png",
+    "splash": {
+      "image": "./assets/icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#F6F5FA"
+    },
     "plugins": [
       [
         "expo-location",
@@ -20,6 +26,10 @@
     "android": {
       "package": "com.constituencymanager.app",
       "versionCode": 430,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icon.png",
+        "backgroundColor": "#24135F"
+      },
       "permissions": [
         "ACCESS_COARSE_LOCATION",
         "ACCESS_FINE_LOCATION",
