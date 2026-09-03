@@ -50,6 +50,7 @@ jobs:
       - name: Prepare V4.4 mobile app
         run: |
           cp AppV41.tsx App.tsx
+          node scripts/write-safe-icon.js assets/icon.png
           node scripts/patch-v411-sqlite.js App.tsx
           node scripts/patch-v430-client.js App.tsx
           node scripts/patch-v440-batch.js App.tsx
