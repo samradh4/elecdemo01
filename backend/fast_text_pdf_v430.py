@@ -5,8 +5,8 @@ from __future__ import annotations
 Selectable-text PDFs should not be rasterized and OCR'd page-by-page. This
 module first tries PyMuPDF word extraction, reuses the existing fixed-card
 geometry/parser, and falls back to the adaptive OCR parser when the text layer
-is absent or incomplete. Scanned PDFs therefore keep the existing OCR safety
-net, while digital PDFs can complete dramatically faster.
+is absent or incomplete. Scanned PDFs therefore keep the OCR safety net, while
+digital PDFs can complete much faster.
 """
 
 import os
@@ -14,7 +14,7 @@ import re
 
 import main as legacy
 
-TEXT_RASTER_SCALE = max(0.8, min(1.5, float(os.environ.get("ROLL_TEXT_RASTER_SCALE", "1.0"))))
+TEXT_RASTER_SCALE = max(0.8, min(1.5, float(os.environ.get("ROLL_TEXT_RASTER_SCALE", "0.9"))))
 TEXT_MIN_WORDS = max(40, min(500, int(os.environ.get("ROLL_TEXT_MIN_WORDS", "90"))))
 TEXT_MIN_EPICS = max(3, min(30, int(os.environ.get("ROLL_TEXT_MIN_EPICS", "8"))))
 TEXT_MIN_ROWS = max(5, min(30, int(os.environ.get("ROLL_TEXT_MIN_ROWS", "15"))))
@@ -61,6 +61,15 @@ def _usable_text_layer(tokens) -> bool:
     return epics >= TEXT_MIN_EPICS
 
 
+def _gray_page_image(page, scale: float):
+    pix = page.get_pixmap(
+        matrix=legacy.fitz.Matrix(scale, scale),
+        colorspace=legacy.fitz.csGRAY,
+        alpha=False,
+    )
+    return legacy.Image.frombytes("L", (pix.width, pix.height), pix.samples)
+
+
 def _text_layer_roll_page(page, page_no: int):
     tokens = _word_tokens(page)
     if not _usable_text_layer(tokens):
@@ -74,11 +83,10 @@ def _text_layer_roll_page(page, page_no: int):
         "pageNo": page_no,
     }
 
-    # A low-resolution raster is retained only for deletion-stamp detection.
+    # A small grayscale raster is kept only for deletion/strike detection.
     # Field text itself comes from the PDF text layer, not Tesseract.
-    pix = page.get_pixmap(matrix=legacy.fitz.Matrix(TEXT_RASTER_SCALE, TEXT_RASTER_SCALE), alpha=False)
-    img = legacy.Image.open(legacy.io.BytesIO(pix.tobytes("png"))).convert("L")
-    gray = legacy.np.array(img)
+    img = _gray_page_image(page, TEXT_RASTER_SCALE)
+    gray = legacy.np.asarray(img)
 
     slots = []
     for row in range(10):
@@ -142,7 +150,6 @@ def _auto_extract_roll_page(page, page_no: int):
         if fast is not None:
             return fast
     except Exception:
-        # Any unexpected text-layer issue must preserve the reliable OCR path.
         pass
     return _OCR_EXTRACT_ROLL_PAGE(page, page_no)
 
@@ -168,3 +175,4 @@ legacy._extract_summary_expectations = _fast_summary
 legacy.TEXT_LAYER_FASTPATH_ENABLED = True
 legacy.TEXT_LAYER_FASTPATH_MIN_EPICS = TEXT_MIN_EPICS
 legacy.TEXT_LAYER_FASTPATH_MIN_WORDS = TEXT_MIN_WORDS
+legacy.TEXT_LAYER_FASTPATH_DIRECT_GRAY = True
