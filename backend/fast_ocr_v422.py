@@ -3,30 +3,40 @@ from __future__ import annotations
 """Fast OCR patch for the fixed-layout Hindi electoral-roll converter.
 
 The legacy extractor does two full-page Tesseract passes (Hindi and English) on
- every voter page. That is accurate but expensive. For bulk processing we first
- run one combined hin+eng pass at a slightly smaller render scale, then keep all
- existing targeted high-resolution fallbacks inside _parse_roll_card. If a page
- looks suspiciously incomplete, we automatically fall back to the original
- two-pass parser for that page rather than silently accepting weak extraction.
+ every voter page. For bulk processing we first run one combined hin+eng pass
+ at a smaller render scale, then keep the existing targeted field fallbacks.
+ Suspicious pages automatically fall back to the reliable two-pass parser.
+
+V4.4 also renders directly to grayscale PyMuPDF pixels instead of creating a
+PNG and decoding it again. That removes avoidable compression/decompression
+work and cuts the page image memory footprint substantially during large batches.
 """
 
 import os
 
 import main as legacy
 
-FAST_SCALE = max(1.5, min(2.2, float(os.environ.get("ROLL_OCR_FAST_SCALE", "1.8"))))
+FAST_SCALE = max(1.4, min(2.2, float(os.environ.get("ROLL_OCR_FAST_SCALE", "1.65"))))
 FAST_LANG = os.environ.get("ROLL_OCR_FAST_LANG", "hin+eng").strip() or "hin+eng"
 MIN_PAGE_ROWS = max(1, min(30, int(os.environ.get("ROLL_OCR_FAST_MIN_ROWS", "15"))))
-MIN_CORE_RATIO = max(0.50, min(1.0, float(os.environ.get("ROLL_OCR_FAST_MIN_CORE_RATIO", "0.78"))))
+MIN_CORE_RATIO = max(0.50, min(1.0, float(os.environ.get("ROLL_OCR_FAST_MIN_CORE_RATIO", "0.80"))))
 
 # Capture the reliable implementation before replacing it.
 _ORIGINAL_EXTRACT_ROLL_PAGE = legacy._extract_roll_page
 
 
+def _gray_page_image(page, scale: float):
+    pix = page.get_pixmap(
+        matrix=legacy.fitz.Matrix(scale, scale),
+        colorspace=legacy.fitz.csGRAY,
+        alpha=False,
+    )
+    return legacy.Image.frombytes("L", (pix.width, pix.height), pix.samples)
+
+
 def _fast_extract_roll_page(page, page_no: int):
     scale = FAST_SCALE
-    pix = page.get_pixmap(matrix=legacy.fitz.Matrix(scale, scale), alpha=False)
-    img = legacy.Image.open(legacy.io.BytesIO(pix.tobytes("png"))).convert("RGB")
+    img = _gray_page_image(page, scale)
 
     # One mixed-language page pass instead of two complete page passes.
     mixed_data = legacy.pytesseract.image_to_data(
@@ -50,7 +60,7 @@ def _fast_extract_roll_page(page, page_no: int):
         "pageNo": page_no,
     }
 
-    gray = legacy.np.array(img.convert("L"))
+    gray = legacy.np.asarray(img)
     slots = []
     for row in range(10):
         for col in range(3):
@@ -80,7 +90,7 @@ def _fast_extract_roll_page(page, page_no: int):
                     for x in row.get("reviewReason", "").split(", ")
                     if x and not x.startswith("serial OCR missing")
                 ]
-                row["reviewReason"] = " ,".join(rr).replace(" ,", ", ")
+                row["reviewReason"] = ", ".join(rr)
 
         core_ok = bool(
             row.get("epicId")
@@ -99,8 +109,8 @@ def _fast_extract_roll_page(page, page_no: int):
         rows.append(row)
 
     # Adaptive safety net: a normal full voter page should yield many cards and
-    # most should have core fields. Bad scans/layouts automatically use the
-    # original two-pass parser for that page, preserving accuracy over speed.
+    # most should have core fields. Weak pages automatically use the original
+    # two-pass parser rather than silently accepting a faster but poorer result.
     core_count = sum(
         1
         for r in rows
@@ -118,7 +128,9 @@ def _fast_extract_roll_page(page, page_no: int):
 
 
 legacy._extract_roll_page = _fast_extract_roll_page
-# Keep the UI/config endpoint truthful about the normal fast-path render scale.
+# The legacy fallback reads OCR_SCALE dynamically, so the configured fast scale
+# remains the single source of truth for the adaptive path as well.
 legacy.OCR_SCALE = FAST_SCALE
 legacy.FAST_OCR_ENABLED = True
 legacy.FAST_OCR_LANG = FAST_LANG
+legacy.FAST_OCR_DIRECT_GRAY = True

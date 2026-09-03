@@ -2,10 +2,16 @@
   "expo": {
     "name": "Constituency Manager",
     "slug": "constituency-manager",
-    "version": "4.2.0",
+    "version": "4.4.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "platforms": ["android", "ios", "web"],
+    "icon": "./assets/icon.png",
+    "splash": {
+      "image": "./assets/icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#F6F5FA"
+    },
     "plugins": [
       [
         "expo-location",
@@ -19,7 +25,11 @@
     ],
     "android": {
       "package": "com.constituencymanager.app",
-      "versionCode": 420,
+      "versionCode": 440,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icon.png",
+        "backgroundColor": "#24135F"
+      },
       "permissions": [
         "ACCESS_COARSE_LOCATION",
         "ACCESS_FINE_LOCATION",
