@@ -1,4 +1,4 @@
-name: Build V4.3 Client Ready APK
+name: Build V4.4 Fast Batch APK
 
 on:
   push:
@@ -25,7 +25,7 @@ jobs:
           pip install --no-cache-dir httpx
       - name: Compile backend
         working-directory: backend
-        run: python -m py_compile main.py v4.py v41.py pdf_bulk_v42.py pdf_import_v42.py fast_ocr_v422.py fast_text_pdf_v430.py v421_demo_fix.py v423_import_diagnostics.py v430_features.py main_v4_entry.py
+        run: python -m py_compile main.py v4.py v41.py pdf_bulk_v42.py pdf_batch_v440.py pdf_import_v42.py fast_ocr_v422.py fast_text_pdf_v430.py v421_demo_fix.py v423_import_diagnostics.py v430_features.py main_v4_entry.py
       - name: V4.1 field operations smoke test
         working-directory: backend
         run: python test_v41_smoke.py
@@ -35,8 +35,11 @@ jobs:
       - name: V4.3 approval and PDF fast-path smoke test
         working-directory: backend
         run: python test_v43_smoke.py
+      - name: V4.4 fast multi-PDF batch smoke test
+        working-directory: backend
+        run: python test_v44_smoke.py
       - name: Verify Docker image with OCR dependencies
-        run: docker build -t constituency-manager-v43 ./backend
+        run: docker build -t constituency-manager-v44 ./backend
 
   build-apk:
     needs: test-backend
@@ -44,14 +47,17 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
-      - name: Prepare V4.3 mobile app
+      - name: Prepare V4.4 mobile app
         run: |
           cp AppV41.tsx App.tsx
           node scripts/patch-v411-sqlite.js App.tsx
           node scripts/patch-v430-client.js App.tsx
+          node scripts/patch-v440-batch.js App.tsx
           grep -q "dbPromise" App.tsx
           grep -q "romanizeHindi" App.tsx
           grep -q "Roman name" App.tsx
+          grep -q "Select multiple PDFs" App.tsx
+          grep -q "/admin/pdf/bulk/single" App.tsx
           ! grep -q "aSyncInit();" App.tsx
       - uses: actions/setup-node@v4
         with:
@@ -64,7 +70,7 @@ jobs:
       - name: Install dependencies
         run: npm install --no-audit --no-fund
       - name: Install Expo native modules
-        run: npx expo install expo-sqlite expo-secure-store @react-native-community/netinfo expo-location expo-task-manager
+        run: npx expo install expo-sqlite expo-secure-store @react-native-community/netinfo expo-location expo-task-manager expo-document-picker expo-file-system expo-sharing
       - name: Type check
         run: npx tsc --noEmit
       - name: Prebuild Android
@@ -78,14 +84,14 @@ jobs:
         run: |
           APK=$(find android/app/build/outputs/apk -type f -name '*.apk' | head -n 1)
           test -n "$APK"
-          cp "$APK" Constituency-Manager-4.3.0-Client-Ready.apk
-          unzip -t Constituency-Manager-4.3.0-Client-Ready.apk >/dev/null
-          sha256sum Constituency-Manager-4.3.0-Client-Ready.apk > Constituency-Manager-4.3.0-Client-Ready.sha256
-          ls -lh Constituency-Manager-4.3.0-Client-Ready.apk
+          cp "$APK" Constituency-Manager-4.4.0-Fast-Batch.apk
+          unzip -t Constituency-Manager-4.4.0-Fast-Batch.apk >/dev/null
+          sha256sum Constituency-Manager-4.4.0-Fast-Batch.apk > Constituency-Manager-4.4.0-Fast-Batch.sha256
+          ls -lh Constituency-Manager-4.4.0-Fast-Batch.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: Constituency-Manager-4.3.0-Client-Ready-APK
+          name: Constituency-Manager-4.4.0-Fast-Batch-APK
           path: |
-            Constituency-Manager-4.3.0-Client-Ready.apk
-            Constituency-Manager-4.3.0-Client-Ready.sha256
+            Constituency-Manager-4.4.0-Fast-Batch.apk
+            Constituency-Manager-4.4.0-Fast-Batch.sha256
           retention-days: 30
