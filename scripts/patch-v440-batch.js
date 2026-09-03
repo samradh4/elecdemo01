@@ -19,7 +19,7 @@ const start = s.indexOf('function AdminHome(');
 const end = s.indexOf('\nfunction AssignmentHome(', start);
 if (start < 0 || end < 0) throw new Error('AdminHome component markers not found');
 
-const replacement = String.raw`function AdminHome({user,online,token,onLogout}:any){
+const replacement = `function AdminHome({user,online,token,onLogout}:any){
   const [picked,setPicked]=useState<any[]>([]),[pdfBusy,setPdfBusy]=useState(false),[batchId,setBatchId]=useState(''),[pdfJobs,setPdfJobs]=useState<PdfJob[]>([]);
   const active=pdfJobs.some(j=>j.status==='queued'||j.status==='processing');
   const done=pdfJobs.length>0&&pdfJobs.every(j=>j.status==='done');
@@ -78,7 +78,7 @@ const replacement = String.raw`function AdminHome({user,online,token,onLogout}:a
       }
       setPicked([]);
       await loadBatch(id,true);
-      if(errors.length)msg('Batch started with some upload errors',errors.slice(0,4).join('\n'));
+      if(errors.length)msg('Batch started with some upload errors',errors.slice(0,4).join('\\n'));
       else msg('Batch started','All PDFs were uploaded. Conversion is running in the background.');
     }catch(e:any){msg('Could not start batch',e.message)}finally{setPdfBusy(false)}
   }
