@@ -2,7 +2,7 @@
   "expo": {
     "name": "Constituency Manager",
     "slug": "constituency-manager",
-    "version": "4.3.0",
+    "version": "4.4.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "platforms": ["android", "ios", "web"],
@@ -25,7 +25,7 @@
     ],
     "android": {
       "package": "com.constituencymanager.app",
-      "versionCode": 430,
+      "versionCode": 440,
       "adaptiveIcon": {
         "foregroundImage": "./assets/icon.png",
         "backgroundColor": "#24135F"
