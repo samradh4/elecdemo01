@@ -1,5 +1,8 @@
 from main import app
 from v4 import router as v4_router
+# Optional one-time admin reset/bootstrap from Render environment variables.
+# No plaintext credentials are stored in the repository.
+import admin_bootstrap_v442  # noqa: F401
 from v441_admin_download_fix import router as v441_admin_download_fix_router
 from v430_features import router as v430_features_router
 from v423_import_diagnostics import router as v423_import_diagnostics_router
